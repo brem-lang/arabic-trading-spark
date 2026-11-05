@@ -2,12 +2,54 @@ import { z } from "zod";
 
 /** Gulf country codes with their local mobile-number rules. */
 export const COUNTRIES = [
-  { code: "+966", label: "السعودية", flag: "🇸🇦", pattern: /^5\d{8}$/, example: "5XXXXXXXX" },
-  { code: "+971", label: "الإمارات", flag: "🇦🇪", pattern: /^5\d{8}$/, example: "5XXXXXXXX" },
-  { code: "+965", label: "الكويت", flag: "🇰🇼", pattern: /^[569]\d{7}$/, example: "5XXXXXXX" },
-  { code: "+974", label: "قطر", flag: "🇶🇦", pattern: /^[3567]\d{7}$/, example: "3XXXXXXX" },
-  { code: "+973", label: "البحرين", flag: "🇧🇭", pattern: /^3\d{7}$/, example: "3XXXXXXX" },
-  { code: "+968", label: "عُمان", flag: "🇴🇲", pattern: /^[79]\d{7}$/, example: "9XXXXXXX" },
+  {
+    code: "+966",
+    iso: "SA",
+    label: "السعودية",
+    flag: "🇸🇦",
+    pattern: /^5\d{8}$/,
+    example: "5XXXXXXXX",
+  },
+  {
+    code: "+971",
+    iso: "AE",
+    label: "الإمارات",
+    flag: "🇦🇪",
+    pattern: /^5\d{8}$/,
+    example: "5XXXXXXXX",
+  },
+  {
+    code: "+965",
+    iso: "KW",
+    label: "الكويت",
+    flag: "🇰🇼",
+    pattern: /^[569]\d{7}$/,
+    example: "5XXXXXXX",
+  },
+  {
+    code: "+974",
+    iso: "QA",
+    label: "قطر",
+    flag: "🇶🇦",
+    pattern: /^[3567]\d{7}$/,
+    example: "3XXXXXXX",
+  },
+  {
+    code: "+973",
+    iso: "BH",
+    label: "البحرين",
+    flag: "🇧🇭",
+    pattern: /^3\d{7}$/,
+    example: "3XXXXXXX",
+  },
+  {
+    code: "+968",
+    iso: "OM",
+    label: "عُمان",
+    flag: "🇴🇲",
+    pattern: /^[79]\d{7}$/,
+    example: "9XXXXXXX",
+  },
 ] as const;
 
 export type CountryCode = (typeof COUNTRIES)[number]["code"];
@@ -149,21 +191,77 @@ export const contactSchema = makeContactSchema("ar");
 
 export type ContactInput = z.input<typeof contactSchema>;
 
-export const QUIZ_FIELDS = ["experience", "goal", "budget", "ai_interest"] as const;
-export type QuizField = (typeof QUIZ_FIELDS)[number];
+/**
+ * Quiz questions and their canonical answer values. These exact English strings are what the
+ * CRM receives whatever language the visitor sees; the UI maps each value to a translated label.
+ */
+export const QUIZ_OPTIONS = {
+  is_saudi_citizen: ["Yes, I am a Saudi citizen.", "No"],
+  investment_amount: [
+    "Less than SAR 5,000",
+    "SAR 5,000–9,999",
+    "SAR 10,000–49,999",
+    "SAR 50,000 or more",
+  ],
+  investment_start_time: [
+    "Within the next 7 days",
+    "Within the next 30 days",
+    "Within the next 3 months",
+    "I am just exploring for now",
+  ],
+  experience_level: [
+    "Beginner — I am ready to learn",
+    "I have some experience",
+    "I am an experienced trader",
+    "I am a professional trader",
+  ],
+  wants_contact: [
+    "Yes, I am ready to discuss the next steps.",
+    "Yes, but I need more information first.",
+  ],
+} as const;
+
+export type QuizField = keyof typeof QUIZ_OPTIONS;
+export type QuizValue<K extends QuizField = QuizField> = (typeof QUIZ_OPTIONS)[K][number];
+export const QUIZ_FIELDS = Object.keys(QUIZ_OPTIONS) as QuizField[];
 
 export const answerSchema = z.object({
-  experience: z.string().trim().min(1).max(60),
-  goal: z.string().trim().min(1).max(60),
-  budget: z.string().trim().min(1).max(60),
-  ai_interest: z.string().trim().min(1).max(60),
+  is_saudi_citizen: z.enum(QUIZ_OPTIONS.is_saudi_citizen),
+  investment_amount: z.enum(QUIZ_OPTIONS.investment_amount),
+  investment_start_time: z.enum(QUIZ_OPTIONS.investment_start_time),
+  experience_level: z.enum(QUIZ_OPTIONS.experience_level),
+  wants_contact: z.enum(QUIZ_OPTIONS.wants_contact),
 });
+
+export type Answers = z.infer<typeof answerSchema>;
 
 export const leadSubmissionSchema = z.object({
   contact: contactSchema,
   answers: answerSchema,
+  /** Honeypot: hidden from people, usually filled by bots. Forwarded as-is to the CRM. */
+  website: z.string().max(200).optional().default(""),
 });
+
+export type LeadSubmission = z.output<typeof leadSubmissionSchema>;
 
 export function toE164(phone: string, countryCode: string): string {
   return `${countryCode}${toLocalNumber(phone, countryCode)}`;
+}
+
+export function countryIso(countryCode: string): string {
+  return COUNTRIES.find((c) => c.code === countryCode)?.iso ?? "";
+}
+
+/** The JSON body the CRM's submit-leads endpoint expects. */
+export function toCrmPayload({ contact, answers, website }: LeadSubmission, ipAddress: string) {
+  return {
+    firstname: contact.firstName,
+    lastname: contact.lastName,
+    email: contact.email,
+    mobile: toE164(contact.phone, contact.countryCode),
+    country_code: countryIso(contact.countryCode),
+    ip_address: ipAddress,
+    website,
+    questions: QUIZ_FIELDS.map((key) => ({ key, value: answers[key] })),
+  };
 }

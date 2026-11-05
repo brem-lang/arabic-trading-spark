@@ -32,7 +32,7 @@ const COPY = {
     h1c: "فقط",
     h1ai: "والذكاء الاصطناعي",
     h1d: "يعمل معك",
-    lead: "أدوات AI تحلل الأسهم والذهب والعملات الرقمية على مدار الساعة، ومستشار يرافقك من أول خطوة. أجب عن 4 أسئلة واحصل على خطتك الشخصية مجاناً.",
+    lead: "أدوات AI تحلل الأسهم والذهب والعملات الرقمية على مدار الساعة، ومستشار يرافقك من أول خطوة. أجب عن 5 أسئلة واحصل على خطتك الشخصية مجاناً.",
     cta: "اكتشف خطتك المجانية",
     how: "كيف يعمل؟",
     stats: [
@@ -62,14 +62,14 @@ const COPY = {
     stepsA: "3 خطوات",
     stepsB: "وتبدأ",
     steps: [
-      { n: "١", title: "أجب عن 4 أسئلة", text: "نفهم خبرتك وأهدافك خلال أقل من دقيقة." },
+      { n: "١", title: "أجب عن 5 أسئلة", text: "نفهم خبرتك وأهدافك خلال أقل من دقيقة." },
       { n: "٢", title: "تواصل مع مستشارك", text: "يتصل بك مستشار ويجهّز حسابك." },
       { n: "٣", title: "ابدأ بـ 250$", text: "فعّل أدوات الذكاء الاصطناعي وابدأ التداول." },
     ],
     perks: ["إيداع سهل عبر مدى والبطاقات", "تطبيق جوال بالعربية", "أسهم، ذهب، عملات رقمية"],
     quizBadge: "أقل من 60 ثانية",
     quizTitle: "اكتشف خطة التداول المناسبة لك",
-    quizSub: "أجب عن 4 أسئلة سريعة ودع الذكاء الاصطناعي يخصص لك البداية.",
+    quizSub: "أجب عن 5 أسئلة سريعة ودع الذكاء الاصطناعي يخصص لك البداية.",
     faqTitle: "أسئلة شائعة",
     faq: [
       { q: "هل يمكنني البدء بـ 250$ فقط؟", a: "نعم، الحد الأدنى للإيداع 250$ ويمكنك زيادته متى شئت حسب راحتك." },
@@ -96,7 +96,7 @@ const COPY = {
     h1c: "",
     h1ai: "and let AI",
     h1d: "work for you",
-    lead: "AI tools analyze stocks, gold and crypto around the clock, and a personal advisor guides you from day one. Answer 4 questions and get your personal plan for free.",
+    lead: "AI tools analyze stocks, gold and crypto around the clock, and a personal advisor guides you from day one. Answer 5 questions and get your personal plan for free.",
     cta: "Get your free plan",
     how: "How it works",
     stats: [
@@ -126,14 +126,14 @@ const COPY = {
     stepsA: "3 steps",
     stepsB: "to start",
     steps: [
-      { n: "1", title: "Answer 4 questions", text: "We learn your experience and goals in under a minute." },
+      { n: "1", title: "Answer 5 questions", text: "We learn your experience and goals in under a minute." },
       { n: "2", title: "Talk to your advisor", text: "An advisor calls you and sets up your account." },
       { n: "3", title: "Start with $250", text: "Activate the AI tools and start trading." },
     ],
     perks: ["Easy deposits via mada & cards", "Mobile app in Arabic & English", "Stocks, gold, crypto"],
     quizBadge: "Under 60 seconds",
     quizTitle: "Find the trading plan that fits you",
-    quizSub: "Answer 4 quick questions and let AI tailor your start.",
+    quizSub: "Answer 5 quick questions and let AI tailor your start.",
     faqTitle: "Frequently asked questions",
     faq: [
       { q: "Can I really start with just $250?", a: "Yes. The minimum deposit is $250 and you can increase it whenever you like." },

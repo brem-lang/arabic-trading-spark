@@ -11,5 +11,5 @@
 
 ## Rules
 - Lead validation lives in `src/lib/lead-schema.ts` and is shared by the browser form and the server function, so client and server checks never drift.
-- Leads are inserted by a public server function using the publishable client under an insert-only anon policy; nobody can read leads from the browser.
+- Leads are sent straight from the browser by `submitLead` (`src/lib/submit-lead.ts`) to the CRM endpoint in `VITE_BASE_ENDPOINT`, with `VITE_BASE_API_KEY` in the `x-api-key` header. The payload shape is built by `toCrmPayload` in `src/lib/lead-schema.ts`.
 - The landing page is bilingual: `/` (Arabic, RTL) and `/en` (English, LTR) render one shared `LandingPage`/`LeadQuiz` with per-language copy objects, so both versions stay in sync.

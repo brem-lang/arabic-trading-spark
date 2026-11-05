@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
+import { useEffect, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -21,61 +20,63 @@ import {
   phoneErrorMessage,
   suggestEmailFix,
   isValidPhone,
+  QUIZ_OPTIONS,
+  type Answers,
   type Lang,
   type QuizField,
+  type QuizValue,
 } from "@/lib/lead-schema";
-import { submitLead } from "@/lib/leads.functions";
+import { submitLead } from "@/lib/submit-lead";
 
-type Question = { field: QuizField; title: string; hint: string; options: { label: string; icon: string }[] };
+type Question = { field: QuizField; title: string; hint: string; options: { value: QuizValue; label: string; icon: string }[] };
+
+/** One [label, icon] pair per canonical option, so a missing translation is a type error. */
+type LabelsFor<T extends readonly string[]> = { readonly [I in keyof T]: readonly [label: string, icon: string] };
+
+/** Builds a question whose options are the canonical CRM values from QUIZ_OPTIONS, in order. */
+function question<K extends QuizField>(
+  field: K,
+  title: string,
+  hint: string,
+  labels: LabelsFor<(typeof QUIZ_OPTIONS)[K]>,
+): Question {
+  const options = QUIZ_OPTIONS[field].map((value, i) => {
+    const [label, icon] = (labels as readonly (readonly [string, string])[])[i]!;
+    return { value, label, icon };
+  });
+  return { field, title, hint, options };
+}
 
 const COPY = {
   ar: {
     questions: [
-      {
-        field: "experience",
-        title: "ما مستوى خبرتك في التداول؟",
-        hint: "لا توجد إجابة خاطئة — نخصص لك الأدوات حسب مستواك",
-        options: [
-          { label: "مبتدئ تماماً", icon: "🌱" },
-          { label: "جربت التداول قليلاً", icon: "📈" },
-          { label: "متداول متوسط", icon: "⚡" },
-          { label: "متداول محترف", icon: "🏆" },
-        ],
-      },
-      {
-        field: "goal",
-        title: "ما هدفك الأساسي من التداول؟",
-        hint: "اختر الأقرب لك",
-        options: [
-          { label: "دخل إضافي شهري", icon: "💰" },
-          { label: "استثمار طويل المدى", icon: "🏦" },
-          { label: "تعلّم الأسواق", icon: "🎓" },
-          { label: "تنويع مدخراتي", icon: "🧭" },
-        ],
-      },
-      {
-        field: "budget",
-        title: "كم تخطط أن تبدأ به؟",
-        hint: "الحد الأدنى للبدء 250$ فقط",
-        options: [
-          { label: "250$ – 500$", icon: "🟢" },
-          { label: "500$ – 1,000$", icon: "🔵" },
-          { label: "1,000$ – 5,000$", icon: "🟡" },
-          { label: "أكثر من 5,000$", icon: "💎" },
-        ],
-      },
-      {
-        field: "ai_interest",
-        title: "كيف تريد أن يساعدك الذكاء الاصطناعي؟",
-        hint: "أدوات AI تحلل السوق على مدار الساعة",
-        options: [
-          { label: "إشارات وتنبيهات ذكية", icon: "🔔" },
-          { label: "تحليل السوق لحظياً", icon: "🤖" },
-          { label: "إدارة المخاطر تلقائياً", icon: "🛡️" },
-          { label: "كل ما سبق", icon: "✨" },
-        ],
-      },
-    ] as Question[],
+      question("is_saudi_citizen", "هل أنت مواطن سعودي؟", "نخصص لك الخدمة حسب بلد إقامتك", [
+        ["نعم، أنا مواطن سعودي", "🇸🇦"],
+        ["لا", "🌍"],
+      ]),
+      question("investment_amount", "كم تخطط أن تستثمر؟", "اختر المبلغ الأقرب لك", [
+        ["أقل من 5,000 ريال", "🟢"],
+        ["5,000 – 9,999 ريال", "🔵"],
+        ["10,000 – 49,999 ريال", "🟡"],
+        ["50,000 ريال أو أكثر", "💎"],
+      ]),
+      question("investment_start_time", "متى تخطط أن تبدأ الاستثمار؟", "لا يوجد التزام — فقط لنعرف توقيتك", [
+        ["خلال الأيام السبعة القادمة", "⚡"],
+        ["خلال الـ 30 يوماً القادمة", "📅"],
+        ["خلال الأشهر الثلاثة القادمة", "🗓️"],
+        ["أستكشف الخيارات فقط حالياً", "🧭"],
+      ]),
+      question("experience_level", "ما مستوى خبرتك في التداول؟", "لا توجد إجابة خاطئة — نخصص لك الأدوات حسب مستواك", [
+        ["مبتدئ — مستعد للتعلّم", "🌱"],
+        ["لدي بعض الخبرة", "📈"],
+        ["متداول ذو خبرة", "⚡"],
+        ["متداول محترف", "🏆"],
+      ]),
+      question("wants_contact", "هل تريد أن يتواصل معك مستشار؟", "مستشارونا يساعدونك في الخطوات التالية", [
+        ["نعم، أنا مستعد لمناقشة الخطوات التالية", "✅"],
+        ["نعم، لكنني أحتاج معلومات أكثر أولاً", "💬"],
+      ]),
+    ],
     done: "تم بنجاح",
     lastStep: "الخطوة الأخيرة",
     questionOf: (n: number, t: number) => `السؤال ${n} من ${t}`,
@@ -97,6 +98,9 @@ const COPY = {
     consent:
       "أوافق على أن يتواصل معي مستشار عبر الهاتف أو البريد، وأدرك أن التداول ينطوي على مخاطر وقد أخسر جزءاً من رأس المال أو كله.",
     sending: "جاري الإرسال...",
+    loadingSteps: ["جاري التحقق من بياناتك...", "جاري إنشاء حسابك...", "جاري تجهيز خطتك الشخصية..."],
+    redirecting: "تم! جاري تحويلك إلى حسابك...",
+    pleaseWait: "يرجى عدم إغلاق الصفحة",
     submit: "احصل على خطتي وابدأ بـ 250$",
     encrypted: "بياناتك مشفّرة",
     noShare: "لا نشارك بياناتك",
@@ -106,51 +110,33 @@ const COPY = {
   },
   en: {
     questions: [
-      {
-        field: "experience",
-        title: "What's your trading experience?",
-        hint: "No wrong answers — we tailor the tools to your level",
-        options: [
-          { label: "Complete beginner", icon: "🌱" },
-          { label: "Tried it a little", icon: "📈" },
-          { label: "Intermediate trader", icon: "⚡" },
-          { label: "Professional trader", icon: "🏆" },
-        ],
-      },
-      {
-        field: "goal",
-        title: "What's your main trading goal?",
-        hint: "Pick the closest one",
-        options: [
-          { label: "Extra monthly income", icon: "💰" },
-          { label: "Long-term investing", icon: "🏦" },
-          { label: "Learn the markets", icon: "🎓" },
-          { label: "Diversify my savings", icon: "🧭" },
-        ],
-      },
-      {
-        field: "budget",
-        title: "How much do you plan to start with?",
-        hint: "Minimum to start is just $250",
-        options: [
-          { label: "$250 – $500", icon: "🟢" },
-          { label: "$500 – $1,000", icon: "🔵" },
-          { label: "$1,000 – $5,000", icon: "🟡" },
-          { label: "More than $5,000", icon: "💎" },
-        ],
-      },
-      {
-        field: "ai_interest",
-        title: "How should AI help you?",
-        hint: "AI tools analyze the market around the clock",
-        options: [
-          { label: "Smart signals & alerts", icon: "🔔" },
-          { label: "Real-time market analysis", icon: "🤖" },
-          { label: "Automated risk management", icon: "🛡️" },
-          { label: "All of the above", icon: "✨" },
-        ],
-      },
-    ] as Question[],
+      question("is_saudi_citizen", "Are you a Saudi citizen?", "We tailor our service to where you live", [
+        ["Yes, I am a Saudi citizen.", "🇸🇦"],
+        ["No", "🌍"],
+      ]),
+      question("investment_amount", "How much do you plan to invest?", "Pick the closest amount", [
+        ["Less than SAR 5,000", "🟢"],
+        ["SAR 5,000–9,999", "🔵"],
+        ["SAR 10,000–49,999", "🟡"],
+        ["SAR 50,000 or more", "💎"],
+      ]),
+      question("investment_start_time", "When do you plan to start investing?", "No commitment — just so we know your timing", [
+        ["Within the next 7 days", "⚡"],
+        ["Within the next 30 days", "📅"],
+        ["Within the next 3 months", "🗓️"],
+        ["I am just exploring for now", "🧭"],
+      ]),
+      question("experience_level", "What's your trading experience?", "No wrong answers — we tailor the tools to your level", [
+        ["Beginner — I am ready to learn", "🌱"],
+        ["I have some experience", "📈"],
+        ["I am an experienced trader", "⚡"],
+        ["I am a professional trader", "🏆"],
+      ]),
+      question("wants_contact", "Would you like an advisor to contact you?", "Our advisors help you with the next steps", [
+        ["Yes, I am ready to discuss the next steps.", "✅"],
+        ["Yes, but I need more information first.", "💬"],
+      ]),
+    ],
     done: "Completed",
     lastStep: "Final step",
     questionOf: (n: number, t: number) => `Question ${n} of ${t}`,
@@ -172,6 +158,9 @@ const COPY = {
     consent:
       "I agree to be contacted by an advisor by phone or email, and I understand trading involves risk and I may lose some or all of my capital.",
     sending: "Sending...",
+    loadingSteps: ["Verifying your details...", "Creating your account...", "Preparing your personal plan..."],
+    redirecting: "Done! Taking you to your account...",
+    pleaseWait: "Please don't close this page",
     submit: "Get my plan & start with $250",
     encrypted: "Your data is encrypted",
     noShare: "We never share your data",
@@ -192,9 +181,9 @@ export function LeadQuiz({ lang = "ar" }: { lang?: Lang }) {
   const Back = rtl ? ArrowRight : ArrowLeft;
   const schema = makeContactSchema(lang);
 
-  const submit = useServerFn(submitLead);
   const [step, setStep] = useState(0);
-  const [answers, setAnswers] = useState<Partial<Record<QuizField, string>>>({});
+  const [answers, setAnswers] = useState<Partial<Answers>>({});
+  const [website, setWebsite] = useState(""); // honeypot
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -204,6 +193,19 @@ export function LeadQuiz({ lang = "ar" }: { lang?: Lang }) {
   const [touched, setTouched] = useState<Partial<Record<FieldKey, boolean>>>({});
   const [errors, setErrors] = useState<Errors>({});
   const [loading, setLoading] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
+  const [sendProgress, setSendProgress] = useState(0);
+
+  // While waiting for the CRM, ease the bar towards 95% so it keeps moving but never "finishes" early.
+  useEffect(() => {
+    if (!loading) {
+      setSendProgress(0);
+      return;
+    }
+    setSendProgress(8);
+    const id = setInterval(() => setSendProgress((p) => p + (95 - p) * 0.06), 150);
+    return () => clearInterval(id);
+  }, [loading]);
   const [done, setDone] = useState(false);
 
   const total = QUESTIONS.length + 1;
@@ -211,7 +213,7 @@ export function LeadQuiz({ lang = "ar" }: { lang?: Lang }) {
   const progress = done ? 100 : Math.round((step / total) * 100);
   const q = QUESTIONS[step];
 
-  const choose = (field: QuizField, value: string) => {
+  const choose = (field: QuizField, value: QuizValue) => {
     setAnswers((a) => ({ ...a, [field]: value }));
     setTimeout(() => setStep((s) => Math.min(s + 1, QUESTIONS.length)), 220);
   };
@@ -244,18 +246,32 @@ export function LeadQuiz({ lang = "ar" }: { lang?: Lang }) {
     const e = validate();
     setErrors(e);
     if (Object.keys(e).length) return;
+    // Every question must be answered; jump back to the first unanswered one.
+    const missing = QUESTIONS.findIndex((qq) => !answers[qq.field]);
+    if (missing !== -1) {
+      setStep(missing);
+      return;
+    }
     setLoading(true);
     try {
-      const res = await submit({
-        data: { contact: { firstName, lastName, email, countryCode, phone, consent }, answers },
+      const res = await submitLead({
+        contact: { firstName, lastName, email, countryCode, phone, consent },
+        answers: answers as Answers,
+        website,
       });
+      if (res.ok && res.autologinUrl) {
+        // Keep the loading overlay up (at 100%) while the browser navigates away.
+        setRedirecting(true);
+        const url = res.autologinUrl;
+        setTimeout(() => window.location.assign(url), 400);
+        return;
+      }
       if (res.ok) setDone(true);
       else setErrors({ form: t.failSave });
     } catch {
       setErrors({ form: t.failCheck });
-    } finally {
-      setLoading(false);
     }
+    setLoading(false);
   };
 
   const nameField = (
@@ -294,6 +310,18 @@ export function LeadQuiz({ lang = "ar" }: { lang?: Lang }) {
           <div className="h-full rounded-full bg-gradient-primary transition-all duration-500" style={{ width: `${progress}%` }} />
         </div>
       </div>
+
+      {loading && (
+        <SubmitOverlay
+          progress={redirecting ? 100 : sendProgress}
+          message={
+            redirecting
+              ? t.redirecting
+              : t.loadingSteps[Math.min(Math.floor(sendProgress / 33), t.loadingSteps.length - 1)]!
+          }
+          hint={t.pleaseWait}
+        />
+      )}
 
       <div className="relative min-h-[420px]">
         {done ? (
@@ -411,6 +439,12 @@ export function LeadQuiz({ lang = "ar" }: { lang?: Lang }) {
               </label>
               {fieldError("consent") && <ErrorText>{fieldError("consent")}</ErrorText>}
 
+              {/* Honeypot: invisible to people, bots tend to fill it. */}
+              <div aria-hidden="true" className="absolute -left-[9999px] h-px w-px overflow-hidden">
+                <label htmlFor="website">Website</label>
+                <input id="website" name="website" tabIndex={-1} autoComplete="off" value={website} onChange={(e) => setWebsite(e.target.value)} />
+              </div>
+
               {errors.form && (
                 <div className="rounded-xl border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">{errors.form}</div>
               )}
@@ -447,12 +481,12 @@ export function LeadQuiz({ lang = "ar" }: { lang?: Lang }) {
             <p className="mt-2 text-center text-sm text-muted-foreground">{q.hint}</p>
             <div className="mt-8 grid gap-3 sm:grid-cols-2">
               {q.options.map((o) => {
-                const selected = answers[q.field] === o.label;
+                const selected = answers[q.field] === o.value;
                 return (
                   <button
-                    key={o.label}
+                    key={o.value}
                     type="button"
-                    onClick={() => choose(q.field, o.label)}
+                    onClick={() => choose(q.field, o.value)}
                     className={cn(
                       "group flex items-center gap-4 rounded-2xl border p-4 text-start transition-all hover:-translate-y-0.5 hover:border-primary/70 hover:bg-primary/5",
                       selected ? "border-primary bg-primary/10 shadow-glow" : "border-border bg-muted/30",
@@ -515,6 +549,36 @@ function Field({
         {valid && !error && <CheckCircle2 className="h-4 w-4 shrink-0 text-primary" />}
       </div>
       {error && <ErrorText>{error}</ErrorText>}
+    </div>
+  );
+}
+
+function SubmitOverlay({ progress, message, hint }: { progress: number; message: string; hint: string }) {
+  const pct = Math.round(progress);
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-background/85 p-8 text-center backdrop-blur-md animate-in fade-in duration-300"
+    >
+      <div className="relative mb-6 flex h-20 w-20 items-center justify-center">
+        <div className="absolute inset-0 rounded-full border-4 border-muted" />
+        <div className="absolute inset-0 animate-spin rounded-full border-4 border-transparent border-t-primary border-r-primary/60" />
+        <span className="text-sm font-bold text-primary tabular-nums">{pct}%</span>
+      </div>
+      <p key={message} className="text-lg font-semibold animate-in fade-in duration-300">
+        {message}
+      </p>
+      <div
+        className="mt-5 h-2 w-full max-w-xs overflow-hidden rounded-full bg-muted"
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={pct}
+      >
+        <div className="h-full rounded-full bg-gradient-primary transition-all duration-300 ease-out" style={{ width: `${pct}%` }} />
+      </div>
+      <p className="mt-4 text-xs text-muted-foreground">{hint}</p>
     </div>
   );
 }

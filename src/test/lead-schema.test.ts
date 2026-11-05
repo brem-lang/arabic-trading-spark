@@ -59,3 +59,40 @@ describe("English form validation", () => {
     expect(en.safeParse({ ...valid, firstName: "John", lastName: "Smith" }).success).toBe(true);
   });
 });
+
+describe("CRM payload", () => {
+  it("matches the submit-leads JSON structure", async () => {
+    const { leadSubmissionSchema, toCrmPayload } = await import("@/lib/lead-schema");
+    const data = leadSubmissionSchema.parse({
+      contact: { ...valid, firstName: "Mohammed", lastName: "Alharbi", email: "mohammed@example.com", phone: "0512345678" },
+      answers: {
+        is_saudi_citizen: "No",
+        investment_amount: "SAR 5,000–9,999",
+        investment_start_time: "Within the next 7 days",
+        experience_level: "Beginner — I am ready to learn",
+        wants_contact: "Yes, but I need more information first.",
+      },
+    });
+    expect(toCrmPayload(data, "203.0.113.7")).toEqual({
+      firstname: "Mohammed",
+      lastname: "Alharbi",
+      email: "mohammed@example.com",
+      mobile: "+966512345678",
+      country_code: "SA",
+      ip_address: "203.0.113.7",
+      website: "",
+      questions: [
+        { key: "is_saudi_citizen", value: "No" },
+        { key: "investment_amount", value: "SAR 5,000–9,999" },
+        { key: "investment_start_time", value: "Within the next 7 days" },
+        { key: "experience_level", value: "Beginner — I am ready to learn" },
+        { key: "wants_contact", value: "Yes, but I need more information first." },
+      ],
+    });
+  });
+
+  it("rejects answers that are not one of the canonical options", async () => {
+    const { answerSchema } = await import("@/lib/lead-schema");
+    expect(answerSchema.safeParse({ is_saudi_citizen: "maybe" }).success).toBe(false);
+  });
+});
