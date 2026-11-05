@@ -1,0 +1,1 @@
+ALTER TABLE public.trading_leads ALTER COLUMN best_time DROP NOT NULL;
