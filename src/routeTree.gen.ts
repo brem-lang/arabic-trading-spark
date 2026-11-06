@@ -10,43 +10,93 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as EnRouteImport } from './routes/en'
+import { Route as DeRouteImport } from './routes/de'
+import { Route as EsRouteImport } from './routes/es'
+import { Route as ItRouteImport } from './routes/it'
+import { Route as PtRouteImport } from './routes/pt'
+import { Route as SaIndexRouteImport } from './routes/sa/index'
+import { Route as SaEnRouteImport } from './routes/sa/en'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const EnRoute = EnRouteImport.update({
-  id: '/en',
-  path: '/en',
+const DeRoute = DeRouteImport.update({
+  id: '/de',
+  path: '/de',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EsRoute = EsRouteImport.update({
+  id: '/es',
+  path: '/es',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ItRoute = ItRouteImport.update({
+  id: '/it',
+  path: '/it',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PtRoute = PtRouteImport.update({
+  id: '/pt',
+  path: '/pt',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SaIndexRoute = SaIndexRouteImport.update({
+  id: '/sa/',
+  path: '/sa/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SaEnRoute = SaEnRouteImport.update({
+  id: '/sa/en',
+  path: '/sa/en',
   getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/en': typeof EnRoute
+  '/de': typeof DeRoute
+  '/es': typeof EsRoute
+  '/it': typeof ItRoute
+  '/pt': typeof PtRoute
+  '/sa/en': typeof SaEnRoute
+  '/sa/': typeof SaIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/en': typeof EnRoute
+  '/de': typeof DeRoute
+  '/es': typeof EsRoute
+  '/it': typeof ItRoute
+  '/pt': typeof PtRoute
+  '/sa/en': typeof SaEnRoute
+  '/sa': typeof SaIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/en': typeof EnRoute
+  '/de': typeof DeRoute
+  '/es': typeof EsRoute
+  '/it': typeof ItRoute
+  '/pt': typeof PtRoute
+  '/sa/en': typeof SaEnRoute
+  '/sa/': typeof SaIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/en'
+  fullPaths: '/' | '/de' | '/es' | '/it' | '/pt' | '/sa/en' | '/sa/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/en'
-  id: '__root__' | '/' | '/en'
+  to: '/' | '/de' | '/es' | '/it' | '/pt' | '/sa/en' | '/sa'
+  id: '__root__' | '/' | '/de' | '/es' | '/it' | '/pt' | '/sa/en' | '/sa/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  EnRoute: typeof EnRoute
+  DeRoute: typeof DeRoute
+  EsRoute: typeof EsRoute
+  ItRoute: typeof ItRoute
+  PtRoute: typeof PtRoute
+  SaEnRoute: typeof SaEnRoute
+  SaIndexRoute: typeof SaIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -58,11 +108,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/en': {
-      id: '/en'
-      path: '/en'
-      fullPath: '/en'
-      preLoaderRoute: typeof EnRouteImport
+    '/de': {
+      id: '/de'
+      path: '/de'
+      fullPath: '/de'
+      preLoaderRoute: typeof DeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/es': {
+      id: '/es'
+      path: '/es'
+      fullPath: '/es'
+      preLoaderRoute: typeof EsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/it': {
+      id: '/it'
+      path: '/it'
+      fullPath: '/it'
+      preLoaderRoute: typeof ItRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pt': {
+      id: '/pt'
+      path: '/pt'
+      fullPath: '/pt'
+      preLoaderRoute: typeof PtRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sa/': {
+      id: '/sa/'
+      path: '/sa'
+      fullPath: '/sa/'
+      preLoaderRoute: typeof SaIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sa/en': {
+      id: '/sa/en'
+      path: '/sa/en'
+      fullPath: '/sa/en'
+      preLoaderRoute: typeof SaEnRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -70,7 +155,12 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  EnRoute: EnRoute,
+  DeRoute: DeRoute,
+  EsRoute: EsRoute,
+  ItRoute: ItRoute,
+  PtRoute: PtRoute,
+  SaEnRoute: SaEnRoute,
+  SaIndexRoute: SaIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

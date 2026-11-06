@@ -1,15 +1,5 @@
-<!-- LOVABLE:BEGIN -->
-> [!IMPORTANT]
-> This project is connected to [Lovable](https://lovable.dev). Avoid rewriting
-> published git history — force pushing, or rebasing/amending/squashing commits
-> that are already pushed — as it rewrites history on Lovable's side and the
-> user will likely lose their project history.
->
-> Commits you push to the connected branch sync back to Lovable and show up in
-> the editor, so keep the branch in a working state.
-<!-- LOVABLE:END -->
-
 ## Rules
 - Lead validation lives in `src/lib/lead-schema.ts` and is shared by the browser form and the server function, so client and server checks never drift.
 - Leads are sent straight from the browser by `submitLead` (`src/lib/submit-lead.ts`) to the CRM endpoint in `VITE_BASE_ENDPOINT`, with `VITE_BASE_API_KEY` in the `x-api-key` header. The payload shape is built by `toCrmPayload` in `src/lib/lead-schema.ts`.
-- The landing page is bilingual: `/` (Arabic, RTL) and `/en` (English, LTR) render one shared `LandingPage`/`LeadQuiz` with per-language copy objects, so both versions stay in sync.
+- Each country (market) has its own route, defined in `src/lib/markets.ts`: `/` is the default English UK page, `/sa` is Saudi Arabic (RTL), `/sa/en` Saudi English, and `/it`, `/de`, `/pt`, `/es` are Italy, Germany, Portugal and Spain in their own language (they share the € quiz, `EUR_QUIZ`). All of them render one shared `LandingPage`/`LeadQuiz` with per-page copy objects (and a per-market quiz in `QUIZ` in `lead-schema.ts`), so versions stay in sync. To add a country, add it to `MARKETS`/`PAGES`, its copy, its quiz and its route file.
+- `src/server.ts` guards the landing pages before rendering: a per-IP rate limit (`src/lib/rate-limit.ts`, Cloudflare `PAGE_RATE_LIMITER` binding configured in `vite.config.ts`, in-memory fallback), then a country gate (`src/lib/geo.ts`) using Cloudflare's `request.cf.country`. A market page is only served to visitors from that country; everyone else is redirected (302, query string kept) to their own market's page, or to `/` when there is none. In local dev, add `?geo=SA` to choose a country.

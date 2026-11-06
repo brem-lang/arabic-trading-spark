@@ -1,26 +1,24 @@
 # Arabic Trading Spark
 
-what is the best ladning page inn saudia in arabic that can attracket leads who want to trader an deposit 250$ and use AI tools to help them i want super powerful with qautioner that aske few questiosn then let the user add his details also the form should be check if name email phone and are correctly working
-
-This project was built with [Lovable](https://lovable.dev).
-
-**Live app**: https://arabic-trading-spark.lovable.app
-
-## Build with Lovable
-
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/5fdb7e77-c95a-4e3c-871c-eba2168be9b9).
-
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
+Bilingual (Arabic RTL at `/`, English LTR at `/en`) lead-generation landing page with a short quiz and a validated lead form. Built with TanStack Start, React, Tailwind and Vite, deployed to Cloudflare Workers.
 
 ## Development
 
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+Requires Node.js (or Bun).
 
 ```sh
-git clone <this-repository-url>
-cd <repository-name>
 npm i
-npm run dev
+npm run dev      # http://localhost:8080
+npm test
 ```
+
+Copy your environment variables into `.env` (see `VITE_BASE_ENDPOINT`, `VITE_BASE_API_KEY`).
+
+## Deploy (Cloudflare Workers)
+
+```sh
+npm run build
+npx wrangler deploy --config .output/server/wrangler.json
+```
+
+Set production environment variables in the Cloudflare dashboard (Workers → Settings → Variables). `VITE_*` values are baked in at build time, so they must be present when you run `npm run build`.

@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { LandingPage } from "@/components/landing/LandingPage";
 
-export const Route = createFileRoute("/en")({
+// Saudi Arabia, English. Only shown to visitors from SA (src/server.ts).
+export const Route = createFileRoute("/sa/en")({
   head: () => ({
     meta: [
       { title: "Start Trading with $250 and AI Tools | Nukhba AI" },
@@ -18,7 +19,7 @@ export const Route = createFileRoute("/en")({
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
-    links: [{ rel: "alternate", hrefLang: "ar", href: "/" }],
+    links: [{ rel: "alternate", hrefLang: "ar", href: "/sa" }],
   }),
-  component: () => <LandingPage lang="en" />,
+  component: () => <LandingPage page="sa-en" />,
 });
