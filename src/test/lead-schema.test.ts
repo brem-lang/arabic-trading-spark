@@ -38,6 +38,36 @@ describe("lead form validation", () => {
     expect(toE164("0501234567", "+966")).toBe("+966501234567");
   });
 
+  it("accepts Jordanian and Lebanese mobiles", async () => {
+    const { countryIso, countriesFor } = await import("@/lib/lead-schema");
+    expect(isValidPhone("0791234567", "+962")).toBe(true);
+    expect(isValidPhone("+962 77 123 4567", "+962")).toBe(true);
+    expect(toE164("0781234567", "+962")).toBe("+962781234567");
+    expect(isValidPhone("0761234567", "+962")).toBe(false); // not a mobile prefix
+    expect(isValidPhone("061234567", "+962")).toBe(false); // Amman landline
+
+    expect(isValidPhone("03 123 456", "+961")).toBe(true);
+    expect(isValidPhone("71 123 456", "+961")).toBe(true);
+    expect(isValidPhone("81123456", "+961")).toBe(true);
+    expect(toE164("03123456", "+961")).toBe("+9613123456");
+    expect(isValidPhone("01123456", "+961")).toBe(false); // Beirut landline
+    expect(isValidPhone("7112345", "+961")).toBe(false); // too short
+
+    expect(countryIso("+962")).toBe("JO");
+    expect(countryIso("+961")).toBe("LB");
+    expect(countriesFor("sa").map((c) => c.iso)).toEqual([
+      "SA",
+      "AE",
+      "KW",
+      "QA",
+      "BH",
+      "OM",
+      "JO",
+      "LB",
+    ]);
+    expect(countriesFor("gb").map((c) => c.iso)).toEqual(["GB"]);
+  });
+
   it("rejects Saudi numbers that are not mobiles or wrong length", () => {
     expect(isValidPhone("0112345678", "+966")).toBe(false);
     expect(isValidPhone("05012345", "+966")).toBe(false);

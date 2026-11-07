@@ -1,0 +1,21 @@
+# /etc/systemd/system/arabic-trading-spark.service
+# Landing pages + lead endpoint for spark.leadsallyearlong.space; nginx proxies to 127.0.0.1:3093.
+[Unit]
+Description=Arabic Trading Spark landing pages (Node server)
+After=network.target
+
+[Service]
+WorkingDirectory=/var/www/arabic-trading-spark/arabic-trading-spark
+# Read by systemd as root, so .env can stay chmod 600.
+EnvironmentFile=/var/www/arabic-trading-spark/arabic-trading-spark/.env
+Environment=NODE_ENV=production HOST=127.0.0.1 PORT=3093
+ExecStart=/usr/bin/node .output/server/index.mjs
+Restart=on-failure
+User=www-data
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

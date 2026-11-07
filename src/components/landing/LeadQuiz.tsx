@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   countriesFor,
+  dialCodeFor,
   makeContactSchema,
   phoneErrorMessage,
   suggestEmailFix,
@@ -27,6 +28,7 @@ import {
 } from "@/lib/lead-schema";
 import { MARKETS, PAGES, type MarketId, type PageId } from "@/lib/markets";
 import { submitLead } from "@/lib/submit-lead";
+import { readVisitorCountry } from "@/lib/visitor-country";
 
 type Question = {
   field: string;
@@ -663,6 +665,11 @@ export function LeadQuiz({ page }: { page: PageId }) {
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [countryCode, setCountryCode] = useState<string>(MARKETS[market].defaultDial);
+  // After hydration (so server and client HTML match): switch to the visitor's own dial code,
+  // e.g. +962 for Jordan, from the country cookie the server sets (src/server.ts).
+  useEffect(() => {
+    setCountryCode(dialCodeFor(market, readVisitorCountry(document.cookie)));
+  }, [market]);
   const [phone, setPhone] = useState("");
   const [consent, setConsent] = useState(false);
   const [touched, setTouched] = useState<Partial<Record<FieldKey, boolean>>>({});

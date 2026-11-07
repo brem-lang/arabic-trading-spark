@@ -7,20 +7,27 @@ export type MarketId = "gb" | "sa" | "it" | "de" | "pt" | "es";
 
 export const MARKETS = {
   /** Default market: anyone whose country has no page of its own lands here. */
-  gb: { iso: "GB", home: "/", dialCodes: ["+44"], defaultDial: "+44" },
+  gb: { countries: ["GB"], home: "/", dialCodes: ["+44"], defaultDial: "+44" },
+  /** Arabic market: Saudi Arabia, the other Gulf states, Jordan and Lebanon. */
   sa: {
-    iso: "SA",
+    countries: ["SA", "AE", "KW", "QA", "BH", "OM", "JO", "LB"],
     home: "/sa",
-    dialCodes: ["+966", "+971", "+965", "+974", "+973", "+968"],
+    dialCodes: ["+966", "+971", "+965", "+974", "+973", "+968", "+962", "+961"],
     defaultDial: "+966",
   },
-  it: { iso: "IT", home: "/it", dialCodes: ["+39"], defaultDial: "+39" },
-  de: { iso: "DE", home: "/de", dialCodes: ["+49"], defaultDial: "+49" },
-  pt: { iso: "PT", home: "/pt", dialCodes: ["+351"], defaultDial: "+351" },
-  es: { iso: "ES", home: "/es", dialCodes: ["+34"], defaultDial: "+34" },
+  it: { countries: ["IT"], home: "/it", dialCodes: ["+39"], defaultDial: "+39" },
+  de: { countries: ["DE"], home: "/de", dialCodes: ["+49"], defaultDial: "+49" },
+  pt: { countries: ["PT"], home: "/pt", dialCodes: ["+351"], defaultDial: "+351" },
+  es: { countries: ["ES"], home: "/es", dialCodes: ["+34"], defaultDial: "+34" },
 } as const satisfies Record<
   MarketId,
-  { iso: string; home: string; dialCodes: readonly string[]; defaultDial: string }
+  {
+    /** ISO countries (Cloudflare's CF-IPCountry) whose visitors get this market's pages. */
+    countries: readonly string[];
+    home: string;
+    dialCodes: readonly string[];
+    defaultDial: string;
+  }
 >;
 
 export const DEFAULT_MARKET: MarketId = "gb";
@@ -43,9 +50,9 @@ export function pageForPath(pathname: string): PageId | undefined {
 
 /** The market a visitor from this ISO country belongs to (default market when there's none). */
 export function marketForCountry(country: string | null | undefined): MarketId {
-  const iso = country?.toUpperCase();
+  const iso = country?.toUpperCase() ?? "";
   const found = (Object.keys(MARKETS) as MarketId[]).find(
-    (id) => id !== DEFAULT_MARKET && MARKETS[id].iso === iso,
+    (id) => id !== DEFAULT_MARKET && (MARKETS[id].countries as readonly string[]).includes(iso),
   );
   return found ?? DEFAULT_MARKET;
 }

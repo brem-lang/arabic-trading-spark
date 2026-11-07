@@ -53,6 +53,24 @@ export const COUNTRIES = [
     pattern: /^[79]\d{7}$/,
     example: "9XXXXXXX",
   },
+  // Jordan: 77 / 78 / 79 + 7 digits (07X XXX XXXX locally).
+  {
+    code: "+962",
+    iso: "JO",
+    label: "الأردن",
+    flag: "🇯🇴",
+    pattern: /^7[789]\d{7}$/,
+    example: "7XXXXXXXX",
+  },
+  // Lebanon: 3 + 6 digits (03 XXX XXX locally), or 70 / 71 / 76 / 78 / 79 / 81 + 6 digits.
+  {
+    code: "+961",
+    iso: "LB",
+    label: "لبنان",
+    flag: "🇱🇧",
+    pattern: /^(?:3\d{6}|7[01689]\d{6}|81\d{6})$/,
+    example: "71XXXXXX",
+  },
   // UK mobiles: 07xxx xxxxxx, excluding 076 pagers (except 07624, Isle of Man mobiles).
   {
     code: "+44",
@@ -106,6 +124,12 @@ export type CountryCode = (typeof COUNTRIES)[number]["code"];
 export function countriesFor(market: MarketId) {
   const codes: readonly string[] = MARKETS[market].dialCodes;
   return COUNTRIES.filter((c) => codes.includes(c.code));
+}
+
+/** The dial code to pre-select: the visitor's own country when this market offers it. */
+export function dialCodeFor(market: MarketId, country: string | null | undefined): string {
+  const iso = country?.toUpperCase();
+  return countriesFor(market).find((c) => c.iso === iso)?.code ?? MARKETS[market].defaultDial;
 }
 
 /** Convert Arabic-Indic / Persian digits to Latin and strip spaces, dashes, brackets. */

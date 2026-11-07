@@ -3,7 +3,9 @@ import "./lib/error-capture";
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
 import { geoRedirect, isPagePath } from "./lib/geo";
+import { LEAD_PATH, handleSubmitLead } from "./lib/lead-proxy.server";
 import { isRateLimited, type RateLimitBinding } from "./lib/rate-limit";
+import { visitorCountryCookie } from "./lib/visitor-country";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -124,15 +126,37 @@ function rememberDevGeo(request: Request, response: Response): Response {
   return copy;
 }
 
+/** Landing pages: tell the form the visitor's country so it can pre-select their dial code. */
+function rememberVisitorCountry(request: Request, response: Response): Response {
+  const url = new URL(request.url);
+  if (!isPagePath(url.pathname) || !response.headers.get("content-type")?.includes("text/html")) {
+    return response;
+  }
+  const cookie = visitorCountryCookie(
+    visitorCountry(request as CloudflareRequest, url),
+    !import.meta.env.DEV,
+  );
+  if (!cookie) return response;
+  const copy = new Response(response.body, response);
+  copy.headers.append("set-cookie", cookie);
+  return copy;
+}
+
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      if (new URL(request.url).pathname === LEAD_PATH) return await handleSubmitLead(request);
+
       const blocked = await guardPage(request as CloudflareRequest);
       if (blocked) return rememberDevGeo(request, blocked);
 
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
-      return rememberDevGeo(request, await normalizeCatastrophicSsrResponse(response));
+      const page = rememberVisitorCountry(
+        request,
+        await normalizeCatastrophicSsrResponse(response),
+      );
+      return rememberDevGeo(request, page);
     } catch (error) {
       console.error(error);
       return new Response(renderErrorPage(), {

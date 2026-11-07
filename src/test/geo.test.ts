@@ -25,6 +25,18 @@ describe("geo redirect", () => {
     expect(geoRedirect("/", "sa")).toBe("/sa");
   });
 
+  it("serves the Arabic market to the Gulf states, Jordan and Lebanon", () => {
+    for (const cc of ["AE", "KW", "QA", "BH", "OM", "JO", "LB"]) {
+      expect(geoRedirect("/", cc)).toBe("/sa");
+      expect(geoRedirect("/sa", cc)).toBeNull();
+      expect(geoRedirect("/sa/en", cc)).toBeNull();
+      expect(geoRedirect("/de", cc)).toBe("/sa");
+    }
+    // Other Middle East countries are not part of it (yet).
+    expect(geoRedirect("/sa", "EG")).toBe("/");
+    expect(geoRedirect("/sa", "IQ")).toBe("/");
+  });
+
   it("normalizes case, trailing slashes and the old /en URL", () => {
     expect(normalizePath("/SA")).toBe("/sa");
     expect(normalizePath("/sa/")).toBe("/sa");

@@ -12,13 +12,19 @@ npm run dev      # http://localhost:8080
 npm test
 ```
 
-Copy your environment variables into `.env` (see `VITE_BASE_ENDPOINT`, `VITE_BASE_API_KEY`).
+Copy `.env.example` to `.env` and fill in `BASE_ENDPOINT` and `BASE_API_KEY` (server-only; the browser
+posts leads to `/api/submit-lead`, which adds the visitor IP and the key). `DEV_IP_ADDRESS` is the IP
+sent with test leads in local dev.
 
-## Deploy (Cloudflare Workers)
+## Deploy (Node server behind nginx)
 
 ```sh
-npm run build
-npx wrangler deploy --config .output/server/wrangler.json
+git pull && npm ci && npm run build && sudo systemctl restart arabic-trading-spark
 ```
 
-Set production environment variables in the Cloudflare dashboard (Workers → Settings → Variables). `VITE_*` values are baked in at build time, so they must be present when you run `npm run build`.
+One-time setup: install `deploy/arabic-trading-spark.service` into `/etc/systemd/system/` and
+`deploy/nginx-spark.conf` as the nginx site, then `systemctl enable --now arabic-trading-spark`
+and `nginx -t && systemctl reload nginx`.
+
+`NITRO_PRESET=cloudflare-module npm run build` still builds a Cloudflare Worker
+(`npx wrangler deploy --config .output/server/wrangler.json`), with `BASE_*` set as Worker secrets.
