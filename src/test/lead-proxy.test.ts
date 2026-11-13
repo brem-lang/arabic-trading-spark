@@ -182,3 +182,51 @@ describe("submitLead (browser)", () => {
     expect(JSON.parse(init.body as string)).not.toHaveProperty("ip_address");
   });
 });
+
+describe("leads log", () => {
+  beforeEach(() => resetMemoryRateLimit());
+  const logCfg: CrmConfig = {
+    ...config,
+    logEndpoint: "https://log.example/api/leads-logs",
+    logApiKey: "log-key",
+  };
+  const logCall = (f: ReturnType<typeof vi.fn>) =>
+    f.mock.calls.find(([url]) => url === logCfg.logEndpoint);
+
+  it("sends the CRM payload to the log after a successful CRM call", async () => {
+    const f = crmReplies(200, { success: true });
+    expect((await handleSubmitLead(post(lead), logCfg, f)).status).toBe(200);
+    await vi.waitFor(() => expect(logCall(f)).toBeDefined());
+    const [, init] = logCall(f)!;
+    expect((init!.headers as Record<string, string>)["Authorization"]).toBe("Bearer log-key");
+    expect(JSON.parse(init!.body as string)).toMatchObject({
+      email: "mohammed@example.com",
+      offer_name: "arabic-trading-spark",
+      ip_address: "203.0.113.7",
+      data: { firstname: "Mohammed", lastname: "Alharbi", market: "sa" },
+    });
+  });
+
+  it("does not log when the CRM rejects the lead", async () => {
+    const f = crmReplies(422, { success: false });
+    expect((await handleSubmitLead(post(lead), logCfg, f)).status).toBe(422);
+    await new Promise((r) => setTimeout(r, 20));
+    expect(logCall(f)).toBeUndefined();
+  });
+
+  it("does not log when the CRM request throws", async () => {
+    const f = vi.fn(async (_url: string | URL | Request, _init?: RequestInit) => {
+      throw new TypeError("network down");
+    });
+    expect((await handleSubmitLead(post(lead), logCfg, f)).status).toBe(503);
+    await new Promise((r) => setTimeout(r, 20));
+    expect(logCall(f)).toBeUndefined();
+  });
+
+  it("does not log without an API key", async () => {
+    const f = crmReplies(200, { success: true });
+    await handleSubmitLead(post(lead), { ...logCfg, logApiKey: undefined }, f);
+    await new Promise((r) => setTimeout(r, 20));
+    expect(logCall(f)).toBeUndefined();
+  });
+});

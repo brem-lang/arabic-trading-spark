@@ -15,6 +15,9 @@ export type CrmConfig = {
   apiKey?: string | undefined;
   /** Local dev only: IP to send when there is no Cloudflare/nginx header. */
   devIp?: string | undefined;
+  /** Leads log: gets a copy of the CRM payload for every lead the CRM accepted. */
+  logEndpoint?: string | undefined;
+  logApiKey?: string | undefined;
 };
 
 /** Server-only settings (never VITE_*, so the API key is not bundled into the page). */
@@ -23,7 +26,46 @@ export function crmConfig(): CrmConfig {
     endpoint: process.env["BASE_ENDPOINT"],
     apiKey: process.env["BASE_API_KEY"],
     devIp: import.meta.env.DEV ? process.env["DEV_IP_ADDRESS"] || "127.0.0.1" : undefined,
+    logEndpoint: process.env["LEADS_LOG_ENDPOINT"] || DEFAULT_LOG_ENDPOINT,
+    logApiKey: process.env["LEADS_LOG_API_KEY"],
   };
+}
+
+const DEFAULT_LOG_ENDPOINT = "https://alphamastercrm.online/api/leads-logs";
+const LOG_TIMEOUT_MS = 10_000;
+const OFFER_NAME = "arabic-trading-spark";
+
+/**
+ * Sends the CRM payload to the leads log. Runs only after the CRM accepted the lead,
+ * never throws, and is not awaited by the caller, so it cannot delay or break the visitor's response.
+ */
+export async function sendLeadLog(
+  payload: ReturnType<typeof toCrmPayload>,
+  market: string,
+  config: CrmConfig,
+  fetchImpl: typeof fetch = fetch,
+): Promise<void> {
+  if (!config.logEndpoint || !config.logApiKey) return;
+  try {
+    const res = await fetchImpl(config.logEndpoint, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${config.logApiKey}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        email: payload.email,
+        offer_name: OFFER_NAME,
+        ip_address: payload.ip_address,
+        data: { ...payload, market },
+      }),
+      signal: AbortSignal.timeout(LOG_TIMEOUT_MS),
+    });
+    if (!res.ok) console.warn(`lead log: rejected status=${res.status}`);
+  } catch (err) {
+    console.warn("lead log: request failed", (err as Error).name);
+  }
 }
 
 /**
@@ -125,6 +167,8 @@ export async function handleSubmitLead(
       return json(res.status === 409 ? 409 : 422, { success: false });
     }
     console.log(`lead submit: ${sent} → accepted`);
+    // Only accepted leads go to the leads log; not awaited, so it cannot delay the response.
+    void sendLeadLog(payload, parsed.data.market, config, fetchImpl);
     return json(200, {
       success: true,
       autologin_url: result.autologin_url ?? result.data?.autologin_url,
