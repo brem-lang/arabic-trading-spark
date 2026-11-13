@@ -1,4 +1,5 @@
-import { leadSubmissionSchema, toCrmPayload } from "./lead-schema";
+import { timingReport } from "./form-timing-report";
+import { leadSubmissionSchema, toCrmPayload, type LeadSubmission } from "./lead-schema";
 import { isRateLimited, type RateRule } from "./rate-limit";
 
 /** The browser posts leads here; the server adds the visitor IP and the CRM API key. */
@@ -42,10 +43,14 @@ const OFFER_NAME = "arabic-trading-spark";
 export async function sendLeadLog(
   payload: ReturnType<typeof toCrmPayload>,
   market: string,
+  timing: LeadSubmission["timing"],
   config: CrmConfig,
   fetchImpl: typeof fetch = fetch,
 ): Promise<void> {
-  if (!config.logEndpoint || !config.logApiKey) return;
+  if (!config.logEndpoint || !config.logApiKey) {
+    console.warn("lead log: skipped, LEADS_LOG_ENDPOINT or LEADS_LOG_API_KEY is not set");
+    return;
+  }
   try {
     const res = await fetchImpl(config.logEndpoint, {
       method: "POST",
@@ -58,11 +63,13 @@ export async function sendLeadLog(
         email: payload.email,
         offer_name: OFFER_NAME,
         ip_address: payload.ip_address,
-        data: { ...payload, market },
+        data: { ...payload, market, timing: timing ? timingReport(timing) : undefined },
       }),
       signal: AbortSignal.timeout(LOG_TIMEOUT_MS),
     });
-    if (!res.ok) console.warn(`lead log: rejected status=${res.status}`);
+    if (res.ok) console.log(`lead log: sent status=${res.status}`);
+    else
+      console.warn(`lead log: rejected status=${res.status} ${(await res.text()).slice(0, 300)}`);
   } catch (err) {
     console.warn("lead log: request failed", (err as Error).name);
   }
@@ -168,7 +175,7 @@ export async function handleSubmitLead(
     }
     console.log(`lead submit: ${sent} → accepted`);
     // Only accepted leads go to the leads log; not awaited, so it cannot delay the response.
-    void sendLeadLog(payload, parsed.data.market, config, fetchImpl);
+    void sendLeadLog(payload, parsed.data.market, parsed.data.timing, config, fetchImpl);
     return json(200, {
       success: true,
       autologin_url: result.autologin_url ?? result.data?.autologin_url,

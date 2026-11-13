@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { timingSchema } from "./form-timing";
 import { MARKETS, type Lang, type MarketId } from "./markets";
 
 export type { Lang, MarketId } from "./markets";
@@ -426,6 +427,8 @@ export const leadSubmissionSchema = z
     answers: z.unknown(),
     /** Honeypot: hidden from people, usually filled by bots. Forwarded as-is to the CRM. */
     website: z.string().max(200).optional().default(""),
+    /** Landing/field/click times, forwarded only to the leads log. Bad data is dropped, never rejects the lead. */
+    timing: timingSchema.optional().catch(undefined),
   })
   .transform((val, ctx) => {
     const contact = makeContactSchema("en", val.market).safeParse(val.contact);
@@ -445,6 +448,7 @@ export const leadSubmissionSchema = z
       contact: contact.data,
       answers: answers.data as Answers,
       website: val.website,
+      timing: val.timing,
     };
   });
 

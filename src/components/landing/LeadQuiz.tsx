@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { createFormTimer, isTimedField, type TimedField } from "@/lib/form-timing";
 import {
   countriesFor,
   dialCodeFor,
@@ -695,13 +696,25 @@ export function LeadQuiz({ page }: { page: PageId }) {
   const progress = done ? 100 : Math.round((step / total) * 100);
   const q = QUESTIONS[step];
 
+  // Landing/answer/field/click times for the leads log (src/lib/form-timing.ts).
+  const timer = useRef<ReturnType<typeof createFormTimer> | null>(null);
+  const timed = () => (timer.current ??= createFormTimer());
+  useEffect(() => {
+    timed().formLoaded();
+  }, []);
+  useEffect(() => {
+    if (isForm) timed().contactFormShown();
+  }, [isForm]);
+
   /** Leave this question unanswered (clearing any earlier answer) and move on. */
   const skip = (field: string) => {
+    if (isTimedField(field)) timed().skip(field);
     setAnswers(({ [field]: _skipped, ...rest }) => rest);
     setStep((s) => Math.min(s + 1, QUESTIONS.length));
   };
 
   const choose = (field: string, value: QuizValue) => {
+    if (isTimedField(field)) timed().input(field);
     setAnswers((a) => ({ ...a, [field]: value }));
     setTimeout(() => setStep((s) => Math.min(s + 1, QUESTIONS.length)), 220);
   };
@@ -730,6 +743,8 @@ export function LeadQuiz({ page }: { page: PageId }) {
 
   const onSubmit = async (ev: React.FormEvent) => {
     ev.preventDefault();
+    // Every click counts, including ones that fail validation.
+    const timing = timed().submitClick();
     setTouched({ firstName: true, lastName: true, email: true, phone: true, consent: true });
     const e = validate();
     setErrors(e);
@@ -742,6 +757,7 @@ export function LeadQuiz({ page }: { page: PageId }) {
         contact: { firstName, lastName, email, countryCode, phone, consent },
         answers: answers as Answers,
         website,
+        timing,
       });
       if (res.ok && res.autologinUrl) {
         // Keep the loading overlay up (at 100%) while the browser navigates away.
@@ -778,8 +794,15 @@ export function LeadQuiz({ page }: { page: PageId }) {
         autoComplete={auto}
         value={value}
         maxLength={50}
-        onChange={(e) => setter(e.target.value)}
-        onBlur={() => setTouched((x) => ({ ...x, [id]: true }))}
+        onFocus={() => timed().focus(id)}
+        onChange={(e) => {
+          timed().input(id);
+          setter(e.target.value);
+        }}
+        onBlur={() => {
+          timed().blur(id);
+          setTouched((x) => ({ ...x, [id]: true }));
+        }}
         placeholder={ph}
         className="h-full w-full min-w-0 bg-transparent outline-none placeholder:text-muted-foreground/60"
       />
@@ -886,8 +909,15 @@ export function LeadQuiz({ page }: { page: PageId }) {
                   autoComplete="email"
                   value={email}
                   maxLength={255}
-                  onChange={(e) => setEmail(e.target.value)}
-                  onBlur={() => setTouched((x) => ({ ...x, email: true }))}
+                  onFocus={() => timed().focus("email")}
+                  onChange={(e) => {
+                    timed().input("email");
+                    setEmail(e.target.value);
+                  }}
+                  onBlur={() => {
+                    timed().blur("email");
+                    setTouched((x) => ({ ...x, email: true }));
+                  }}
                   placeholder="name@example.com"
                   className={cn(
                     "h-full w-full bg-transparent outline-none placeholder:text-muted-foreground/60",
@@ -898,7 +928,10 @@ export function LeadQuiz({ page }: { page: PageId }) {
               {emailFix && (
                 <button
                   type="button"
-                  onClick={() => setEmail(emailFix)}
+                  onClick={() => {
+                    timed().input("email");
+                    setEmail(emailFix);
+                  }}
                   className="-mt-2 text-xs text-gold underline underline-offset-4"
                 >
                   {t.didYouMean} <span dir="ltr">{emailFix}</span>?
@@ -913,7 +946,10 @@ export function LeadQuiz({ page }: { page: PageId }) {
                   <select
                     aria-label={t.countryCode}
                     value={countryCode}
-                    onChange={(e) => setCountryCode(e.target.value)}
+                    onChange={(e) => {
+                      timed().input("countryCode");
+                      setCountryCode(e.target.value);
+                    }}
                     className="h-12 rounded-xl border border-input bg-muted/50 px-2 text-sm outline-none focus:border-primary"
                   >
                     {COUNTRIES.map((c) => (
@@ -940,10 +976,15 @@ export function LeadQuiz({ page }: { page: PageId }) {
                       autoComplete="tel-national"
                       value={phone}
                       maxLength={20}
-                      onChange={(e) =>
-                        setPhone(e.target.value.replace(/[^\d\u0660-\u0669\s+\-]/g, ""))
-                      }
-                      onBlur={() => setTouched((x) => ({ ...x, phone: true }))}
+                      onFocus={() => timed().focus("phone")}
+                      onChange={(e) => {
+                        timed().input("phone");
+                        setPhone(e.target.value.replace(/[^\d\u0660-\u0669\s+\-]/g, ""));
+                      }}
+                      onBlur={() => {
+                        timed().blur("phone");
+                        setTouched((x) => ({ ...x, phone: true }));
+                      }}
                       placeholder={country.example}
                       className="h-full w-full bg-transparent outline-none placeholder:text-muted-foreground/60"
                     />
@@ -958,6 +999,7 @@ export function LeadQuiz({ page }: { page: PageId }) {
                   type="checkbox"
                   checked={consent}
                   onChange={(e) => {
+                    timed().input("consent");
                     setConsent(e.target.checked);
                     setTouched((x) => ({ ...x, consent: true }));
                   }}
@@ -1068,7 +1110,10 @@ export function LeadQuiz({ page }: { page: PageId }) {
               <div className="flex items-center gap-4">
                 <button
                   type="button"
-                  onClick={() => setStep(QUESTIONS.length)}
+                  onClick={() => {
+                    timed().skipAllClick();
+                    setStep(QUESTIONS.length);
+                  }}
                   className="text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
                 >
                   {t.skipAll}

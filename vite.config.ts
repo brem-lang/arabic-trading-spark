@@ -11,9 +11,15 @@ import tsConfigPaths from "vite-tsconfig-paths";
 const preset = process.env["NITRO_PRESET"] || "node-server";
 const cloudflare = preset.startsWith("cloudflare");
 
-// Server-only settings (BASE_ENDPOINT, BASE_API_KEY, DEV_IP_ADDRESS) for `vite dev`; in
-// production systemd loads .env. Not VITE_*, so they never reach the browser bundle.
-const SERVER_ENV = ["BASE_ENDPOINT", "BASE_API_KEY", "DEV_IP_ADDRESS"];
+// Server-only settings for `vite dev`; in production systemd loads .env. Not VITE_*, so they
+// never reach the browser bundle. Every server env var the app reads must be listed here.
+const SERVER_ENV = [
+  "BASE_ENDPOINT",
+  "BASE_API_KEY",
+  "DEV_IP_ADDRESS",
+  "LEADS_LOG_ENDPOINT",
+  "LEADS_LOG_API_KEY",
+];
 
 export default defineConfig(({ command, mode }) => {
   if (command === "serve") {

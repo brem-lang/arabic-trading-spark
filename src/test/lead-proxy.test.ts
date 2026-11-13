@@ -207,6 +207,39 @@ describe("leads log", () => {
     });
   });
 
+  it("adds the readable form timing to the log, never to the CRM", async () => {
+    const timing = {
+      landed_at: "2026-11-12T12:34:20.777Z",
+      submitted_at: "2026-11-12T12:34:40.771Z",
+      timezone: "Asia/Riyadh",
+      utc_offset_min: 180,
+      submit_click_ms: 19_993,
+      fields: { is_saudi_citizen: { input_count: 1, first_input_ms: 4_000, last_input_ms: 4_000 } },
+    };
+    const f = crmReplies(200, { success: true });
+    expect((await handleSubmitLead(post({ ...lead, timing }), logCfg, f)).status).toBe(200);
+    await vi.waitFor(() => expect(logCall(f)).toBeDefined());
+    const crmCall = (f as ReturnType<typeof vi.fn>).mock.calls.find(
+      ([url]) => url === config.endpoint,
+    );
+    const crmBody = JSON.parse(crmCall![1]!.body as string);
+    expect(crmBody.timing).toBeUndefined();
+    const logBody = JSON.parse(logCall(f)![1]!.body as string);
+    expect(logBody.data.timing).toMatchObject({
+      landed_at: "2026-11-12 15:34:20 (Asia/Riyadh, UTC+03:00)",
+      time_before_submit: "20.0s",
+      fields: { "Q Saudi citizen": "answered at 4.0s" },
+    });
+  });
+
+  it("still accepts the lead when the timing is malformed", async () => {
+    const f = crmReplies(200, { success: true });
+    const res = await handleSubmitLead(post({ ...lead, timing: { junk: true } }), logCfg, f);
+    expect(res.status).toBe(200);
+    await vi.waitFor(() => expect(logCall(f)).toBeDefined());
+    expect(JSON.parse(logCall(f)![1]!.body as string).data.timing).toBeUndefined();
+  });
+
   it("does not log when the CRM rejects the lead", async () => {
     const f = crmReplies(422, { success: false });
     expect((await handleSubmitLead(post(lead), logCfg, f)).status).toBe(422);
